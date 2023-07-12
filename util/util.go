@@ -42,6 +42,31 @@ func AesCbcDecrypt(ciphertext []byte, key []byte, iv []byte) (res []byte, err er
 	return res, nil
 }
 
+func AesCbcEncrypt(plaintext []byte, key []byte, iv []byte) (res []byte, err error) {
+	if len(iv) != AesBlockSize {
+		return nil, fmt.Errorf("IV had %d bytes, expected %d", len(iv), AesBlockSize)
+	}
+
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	padded := PKCS7Pad(plaintext, AesBlockSize)
+	res = make([]byte, len(padded))
+	prevBlock := iv
+	tmpBuf := make([]byte, AesBlockSize)
+	for i := 0; i < len(padded); i += AesBlockSize {
+		for j := 0; j < AesBlockSize; j++ {
+			tmpBuf[j] = padded[i+j] ^ prevBlock[j]
+		}
+		prevBlock = res[i : i+AesBlockSize]
+		cipher.Encrypt(prevBlock, tmpBuf)
+	}
+
+	return res, nil
+}
+
 func ReadBase64File(fileName string) (content []byte, err error) {
 	b64content, err := os.ReadFile(fileName)
 	if err != nil {

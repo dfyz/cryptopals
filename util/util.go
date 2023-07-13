@@ -2,8 +2,10 @@ package util
 
 import (
 	"crypto/aes"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -67,6 +69,20 @@ func AesCbcEncrypt(plaintext []byte, key []byte, iv []byte) (res []byte, err err
 	return res, nil
 }
 
+func AesEcbEncrypt(plaintext []byte, key []byte) (res []byte, err error) {
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	padded := PKCS7Pad(plaintext, AesBlockSize)
+	res = make([]byte, len(padded))
+	for i := 0; i < len(res); i += AesBlockSize {
+		cipher.Encrypt(res[i:i+AesBlockSize], padded[i:i+AesBlockSize])
+	}
+	return res, nil
+}
+
 func ReadBase64File(fileName string) (content []byte, err error) {
 	b64content, err := os.ReadFile(fileName)
 	if err != nil {
@@ -80,4 +96,13 @@ func ReadBase64File(fileName string) (content []byte, err error) {
 	}
 
 	return res[:bytesDecoded], nil
+}
+
+func RandBytes(n int) []byte {
+	res := make([]byte, n)
+	_, err := rand.Read(res)
+	if err != nil {
+		log.Fatalf("Failed to generated %d random bytes: %v", n, err)
+	}
+	return res
 }

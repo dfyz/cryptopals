@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"crypto/aes"
-	cryptoRand "crypto/rand"
 	"cryptopals/util"
 	"fmt"
 	"log"
@@ -31,23 +30,14 @@ func Solve10() {
 }
 
 func Solve11() {
-	randBytes := func(n int) []byte {
-		res := make([]byte, n)
-		_, err := cryptoRand.Read(res)
-		if err != nil {
-			log.Fatalf("Failed to generated %d random bytes: %v", n, err)
-		}
-		return res
-	}
-
 	ecbCbcOracle := func(plaintext []byte) (res []byte, isCbc bool) {
-		prefix := randBytes(5 + rand.Intn(6))
-		suffix := randBytes(5 + rand.Intn(6))
+		prefix := util.RandBytes(5 + rand.Intn(6))
+		suffix := util.RandBytes(5 + rand.Intn(6))
 		extended := append(append(prefix, plaintext...), suffix...)
-		key := randBytes(util.AesBlockSize)
+		key := util.RandBytes(util.AesBlockSize)
 		if rand.Intn(2) == 1 {
 			// CBC
-			iv := randBytes(util.AesBlockSize)
+			iv := util.RandBytes(util.AesBlockSize)
 			res, err := util.AesCbcEncrypt(extended, key, iv)
 			if err != nil {
 				log.Fatalf("Failed to encrypt under CBC: %v", err)
@@ -55,14 +45,9 @@ func Solve11() {
 			return res, true
 		} else {
 			// ECB
-			padded := util.PKCS7Pad(extended, util.AesBlockSize)
-			res := make([]byte, len(padded))
-			cipher, err := aes.NewCipher(key)
+			res, err := util.AesEcbEncrypt(extended, key)
 			if err != nil {
 				log.Fatalf("Failed to create a cipher for AES-ECB: %v", err)
-			}
-			for i := 0; i < len(res); i += util.AesBlockSize {
-				cipher.Encrypt(res[i:i+util.AesBlockSize], padded[i:i+util.AesBlockSize])
 			}
 			return res, false
 		}
@@ -93,8 +78,65 @@ func Solve11() {
 	fmt.Printf("Challenge 11: guessed %d times out of %d\n", guessed, attempts)
 }
 
+func Solve12() {
+	key := util.RandBytes(util.AesBlockSize)
+	secret, err := util.ReadBase64File("12.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	oracle := func(payload []byte) []byte {
+		plaintext := append(payload, secret...)
+		encrypted, err := util.AesEcbEncrypt(plaintext, key)
+		if err != nil {
+			log.Fatalf("Failed to encrypt <%v>: %v", payload, err)
+		}
+		return encrypted
+	}
+
+	paddingBytes := 0
+	rep := func(n int) []byte {
+		return bytes.Repeat([]byte("A"), n)
+	}
+	secretLen := len(oracle(rep(0)))
+	for {
+		paddingBytes++
+		if secretLen != len(oracle(rep(paddingBytes))) {
+			break
+		}
+	}
+	secretLen -= paddingBytes
+
+	const a = util.AesBlockSize
+	type Block = [a]byte
+	knownPlaintext := make([]byte, 0)
+	for y := 0; y < secretLen; y++ {
+		x := ((-(y + 1) % a) + a) % a
+		prefix := append(rep(x), knownPlaintext...)
+		codebook := make(map[Block]byte)
+		lastBlock := prefix[len(prefix)-(a-1):]
+		for b := 0; b < 256; b++ {
+			payload := append(lastBlock, byte(b))
+			key := Block(oracle(payload)[:a])
+			codebook[key] = byte(b)
+		}
+
+		encrypted := oracle(rep(x))
+		targetStart := len(prefix) - (a - 1)
+		target := Block(encrypted[targetStart : targetStart+a])
+		restored, ok := codebook[target]
+		if !ok {
+			log.Fatalf("Failed to restore byte %d", y)
+		}
+		knownPlaintext = append(knownPlaintext, restored)
+	}
+
+	fmt.Printf("Challenge 12: %q", knownPlaintext)
+}
+
 func main() {
 	Solve9()
 	Solve10()
 	Solve11()
+	Solve12()
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 func PKCS7Pad(input []byte, blockSize int) []byte {
@@ -17,6 +18,26 @@ func PKCS7Pad(input []byte, blockSize int) []byte {
 		res[i] = byte(rem)
 	}
 	return res
+}
+
+func PKCS7Unpad(input []byte, blockSize int) ([]byte, error) {
+	if len(input) == 0 || len(input)%blockSize != 0 {
+		return nil, fmt.Errorf("invalid input length for block size %d: %d", blockSize, len(input))
+	}
+
+	nPad := int(input[len(input)-1])
+	if nPad > blockSize {
+		return nil, fmt.Errorf("the padding %d is too large for block size %d", nPad, blockSize)
+	}
+
+	for i := 2; i <= nPad; i++ {
+		curPad := int(input[len(input)-i])
+		if curPad != nPad {
+			return nil, fmt.Errorf("invalid padding at position %d: got %d, expected %d", i, curPad, nPad)
+		}
+	}
+
+	return input[:len(input)-nPad], nil
 }
 
 const AesBlockSize = 16
@@ -83,6 +104,19 @@ func AesEcbEncrypt(plaintext []byte, key []byte) (res []byte, err error) {
 	return res, nil
 }
 
+func AesEcbDecrypt(ciphertext []byte, key []byte) ([]byte, error) {
+	cipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]byte, len(ciphertext))
+	for i := 0; i < len(res); i += AesBlockSize {
+		cipher.Decrypt(res[i:i+AesBlockSize], ciphertext[i:i+AesBlockSize])
+	}
+	return PKCS7Unpad(res, AesBlockSize)
+}
+
 func ReadBase64File(fileName string) (content []byte, err error) {
 	b64content, err := os.ReadFile(fileName)
 	if err != nil {
@@ -105,4 +139,26 @@ func RandBytes(n int) []byte {
 		log.Fatalf("Failed to generated %d random bytes: %v", n, err)
 	}
 	return res
+}
+
+func ParseKV(s string) (map[string]string, error) {
+	res := make(map[string]string)
+	hasMoreKV := true
+	for hasMoreKV {
+		kv := s
+		hasMoreKV = false
+		if ampPos := strings.Index(s, "&"); ampPos >= 0 {
+			kv = s[:ampPos]
+			s = s[ampPos+1:]
+			hasMoreKV = true
+		}
+
+		if eqPos := strings.Index(kv, "="); eqPos >= 0 {
+			key, value := kv[:eqPos], kv[eqPos+1:]
+			res[key] = value
+		} else {
+			return nil, fmt.Errorf("<%s> is not a valid key/value pair", kv)
+		}
+	}
+	return res, nil
 }

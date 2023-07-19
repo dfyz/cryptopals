@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 )
 
 func Solve9() {
@@ -131,7 +132,79 @@ func Solve12() {
 		knownPlaintext = append(knownPlaintext, restored)
 	}
 
-	fmt.Printf("Challenge 12: %q", knownPlaintext)
+	fmt.Printf("Challenge 12: %q\n", knownPlaintext)
+}
+
+func Solve13() {
+	userId := 0
+	profileFor := func(email string) string {
+		if strings.ContainsAny(email, "&=") {
+			log.Fatalf("<%s> is not a valid email", email)
+		}
+		userId++
+		return fmt.Sprintf("email=%s&uid=%d&role=user", email, userId)
+	}
+
+	key := util.RandBytes(util.AesBlockSize)
+
+	encryptProfile := func(email string) []byte {
+		res, err := util.AesEcbEncrypt([]byte(profileFor(email)), key)
+		if err != nil {
+			log.Fatalf("Failed to encrypt profile for e-mail <%s>: <%v>", email, err)
+		}
+		return res
+	}
+
+	decryptProfile := func(encrypted []byte) map[string]string {
+		rawProfile, err := util.AesEcbDecrypt(encrypted, key)
+		if err != nil {
+			log.Fatalf("Failed to decrypt profile <%v>: <%v>", encrypted, err)
+		}
+
+		res, err := util.ParseKV(string(rawProfile))
+		if err != nil {
+			log.Fatalf("Failed to parse decrypted profile <%v>: <%v>", rawProfile, err)
+		}
+		return res
+	}
+
+	profile1 := encryptProfile("AAAAAAAAAAAAAA")
+	evil1 := profile1[:2*util.AesBlockSize]
+	profile2 := encryptProfile("AAAAAAAAAAAAAAAAAAAAAAAAAAadmin")
+	evil2 := profile2[2*util.AesBlockSize : len(profile2)-util.AesBlockSize]
+	evil3 := profile2[:util.AesBlockSize]
+	evil4 := profile1[len(profile1)-util.AesBlockSize:]
+	evil := bytes.Join([][]byte{
+		evil1, evil2, evil3, evil4,
+	}, []byte(""))
+	decrypted := decryptProfile(evil)
+
+	isAdminRole := func(profile map[string]string) bool {
+		value, ok := profile["role"]
+		return ok && value == "admin"
+	}
+	fmt.Printf("Challenge 13: isAdminRole(%v) = %v\n", decrypted, isAdminRole(decrypted))
+}
+
+func Solve15() {
+	isValidPadding := func(input []byte) bool {
+		_, err := util.PKCS7Unpad(input, aes.BlockSize)
+		return err == nil
+	}
+
+	valid := []byte("ICE ICE BABY\x04\x04\x04\x04")
+	invalid1 := []byte("ICE ICE BABY\x05\x05\x05\x05")
+	invalid2 := []byte("ICE ICE BABY\x01\x02\x03\x04")
+
+	fmt.Printf(
+		"Challenge 15: valid(%q) = %v, valid(%q) = %v, valid(%q) = %v\n",
+		valid,
+		isValidPadding(valid),
+		invalid1,
+		isValidPadding(invalid1),
+		invalid2,
+		isValidPadding(invalid2),
+	)
 }
 
 func main() {
@@ -139,4 +212,6 @@ func main() {
 	Solve10()
 	Solve11()
 	Solve12()
+	Solve13()
+	Solve15()
 }

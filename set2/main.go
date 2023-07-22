@@ -30,6 +30,27 @@ func Solve10() {
 	fmt.Printf("Challenge 10: %q\n", decoded)
 }
 
+func hasRepeatedBlock(input []byte) bool {
+	for start := 0; start+2*util.AesBlockSize <= len(input); start += util.AesBlockSize {
+		n := len(input) - start
+		pi := make([]int, n)
+		for i := 1; i < n; i++ {
+			j := pi[i-1]
+			for j > 0 && input[start+i] != input[start+j] {
+				j = pi[j-1]
+			}
+			if input[start+i] == input[start+j] {
+				j++
+				if j >= util.AesBlockSize {
+					return true
+				}
+			}
+			pi[i] = j
+		}
+	}
+	return false
+}
+
 func Solve11() {
 	ecbCbcOracle := func(plaintext []byte) (res []byte, isCbc bool) {
 		prefix := util.RandBytes(5 + rand.Intn(6))
@@ -186,6 +207,64 @@ func Solve13() {
 	fmt.Printf("Challenge 13: isAdminRole(%v) = %v\n", decrypted, isAdminRole(decrypted))
 }
 
+func Solve14() {
+	key := util.RandBytes(util.AesBlockSize)
+	secret, err := util.ReadBase64File("12.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	oracle := func(payload []byte) []byte {
+		prefix := util.RandBytes(rand.Intn(42))
+		plaintext := append(prefix, append(payload, secret...)...)
+		encrypted, err := util.AesEcbEncrypt(plaintext, key)
+		if err != nil {
+			log.Fatalf("Failed to encrypt <%v>: %v", payload, err)
+		}
+		return encrypted
+	}
+
+	guessChar := func(known []byte) byte {
+		nextLen := len(known) + 1
+
+		padLen := 0
+		if nextLen%util.AesBlockSize != 0 {
+			padLen = util.AesBlockSize - nextLen%util.AesBlockSize
+		}
+		pad := make([]byte, padLen)
+
+		suffix := append(pad, append(known, byte(0))...)
+		payload := append(suffix[len(suffix)-util.AesBlockSize:], pad...)
+
+		cands := make(map[byte]int)
+		iter := 0
+		for {
+			for b := 0; b < 256; b++ {
+				bb := byte(b)
+				payload[util.AesBlockSize-1] = bb
+				encrypted := oracle(payload)
+				if hasRepeatedBlock(encrypted) {
+					cands[bb]++
+					if cands[bb] > 2 {
+						return bb
+					}
+				}
+			}
+			iter++
+		}
+	}
+
+	knownPlaintext := make([]byte, 0)
+	for {
+		guessed := guessChar(knownPlaintext)
+		if guessed == 1 {
+			break
+		}
+		knownPlaintext = append(knownPlaintext, guessed)
+	}
+	fmt.Printf("Challenge 14: %q\n", knownPlaintext)
+}
+
 func Solve15() {
 	isValidPadding := func(input []byte) bool {
 		_, err := util.PKCS7Unpad(input, aes.BlockSize)
@@ -213,5 +292,6 @@ func main() {
 	Solve11()
 	Solve12()
 	Solve13()
+	Solve14()
 	Solve15()
 }

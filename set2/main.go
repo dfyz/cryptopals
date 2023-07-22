@@ -215,6 +215,11 @@ func Solve14() {
 	}
 
 	oracle := func(payload []byte) []byte {
+		// Note that the challenge description is ambiguous: it is not clear if the oracle should
+		// generate the prefix upfront (similar to the AES key), or re-generate the prefix every
+		// time the oracle is called.
+		//
+		// My solution is for the latter version, which is harder to attack.
 		prefix := util.RandBytes(rand.Intn(42))
 		plaintext := append(prefix, append(payload, secret...)...)
 		encrypted, err := util.AesEcbEncrypt(plaintext, key)

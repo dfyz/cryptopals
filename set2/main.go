@@ -31,21 +31,16 @@ func Solve10() {
 }
 
 func hasRepeatedBlock(input []byte) bool {
-	for start := 0; start+2*util.AesBlockSize <= len(input); start += util.AesBlockSize {
-		n := len(input) - start
-		pi := make([]int, n)
-		for i := 1; i < n; i++ {
-			j := pi[i-1]
-			for j > 0 && input[start+i] != input[start+j] {
-				j = pi[j-1]
+	const a = util.AesBlockSize
+	for ii := 0; ii+2*a <= len(input); ii += a {
+		for jj := ii + a; jj+a <= len(input); jj += a {
+			matches := true
+			for k := 0; matches && k < a; k++ {
+				matches = matches && (input[ii+k] == input[jj+k])
 			}
-			if input[start+i] == input[start+j] {
-				j++
-				if j >= util.AesBlockSize {
-					return true
-				}
+			if matches {
+				return true
 			}
-			pi[i] = j
 		}
 	}
 	return false
@@ -242,7 +237,6 @@ func Solve14() {
 		payload := append(suffix[len(suffix)-util.AesBlockSize:], pad...)
 
 		cands := make(map[byte]int)
-		iter := 0
 		for {
 			for b := 0; b < 256; b++ {
 				bb := byte(b)
@@ -255,7 +249,6 @@ func Solve14() {
 					}
 				}
 			}
-			iter++
 		}
 	}
 

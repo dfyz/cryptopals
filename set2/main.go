@@ -6,6 +6,7 @@ import (
 	"cryptopals/util"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"strings"
 )
@@ -236,9 +237,9 @@ func Solve14() {
 		suffix := append(pad, append(known, byte(0))...)
 		payload := append(suffix[len(suffix)-util.AesBlockSize:], pad...)
 
-		cands := make(map[byte]int)
+		cands := make([]byte, math.MaxUint8)
 		for {
-			for b := 0; b < 256; b++ {
+			for b := 0; b < math.MaxUint8; b++ {
 				bb := byte(b)
 				payload[util.AesBlockSize-1] = bb
 				encrypted := oracle(payload)

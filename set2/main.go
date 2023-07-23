@@ -285,6 +285,64 @@ func Solve15() {
 	)
 }
 
+func Solve16() {
+	key := util.RandBytes(util.AesBlockSize)
+
+	encrypt := func(payload []byte) (ciphertext []byte, iv []byte) {
+		if bytes.ContainsAny(payload, ";=") {
+			log.Fatalf("Payload %q contains forbidden characters", payload)
+		}
+		prefix := []byte("comment1=cooking%20MCs;userdata=")
+		suffix := []byte(";comment2=%20like%20a%20pound%20of%20bacon")
+		plaintext := append(prefix, append(payload, suffix...)...)
+		localIv := util.RandBytes(util.AesBlockSize)
+		res, err := util.AesCbcEncrypt(plaintext, key, localIv)
+		if err != nil {
+			log.Fatalf("Failed to encrypt %q: %v", payload, err)
+		}
+		return res, localIv
+	}
+
+	isAdmin := func(ciphertext []byte, iv []byte) bool {
+		decrypted, err := util.AesCbcDecrypt(ciphertext, key, iv)
+		if err != nil {
+			log.Fatalf("Failed to decrypt %q: %v", ciphertext, err)
+		}
+		fmt.Printf("%q\n", decrypted)
+		return bytes.Contains(decrypted, []byte(";admin=true;"))
+	}
+
+	payload := append(
+		bytes.Repeat([]byte("A"), util.AesBlockSize), // We will flip bits in this block...
+		[]byte("?admin?true?")...,                    // ...in order to change this one.
+	)
+	ciphertext, iv := encrypt(payload)
+
+	bitFlip := func(byteIdx int, bitIdx int) {
+		ciphertext[byteIdx] = ciphertext[byteIdx] ^ (1 << bitIdx)
+	}
+
+	// The 2nd (0-indexed) block contains the block we want to mess with
+	start := 2 * util.AesBlockSize
+
+	//        7 6 5 4 3  2   1  0
+	// '?' is 0 0 1 1 1  1   1  1
+	// ';' is 0 0 1 1 1 [0]  1  1
+	// '=' is 0 0 1 1 1  1  [0] 1
+
+	// v              v
+	// ?admin?true? → ;admin?true?
+	bitFlip(start, 2)
+	//       v              v
+	// ;admin?true? → ;admin=true?
+	bitFlip(start+6, 1)
+	//            v              v
+	// ;admin=true? → ;admin=true;
+	bitFlip(start+11, 2)
+
+	fmt.Printf("Challenge 16: isAdmin = %v\n", isAdmin(ciphertext, iv))
+}
+
 func main() {
 	Solve9()
 	Solve10()
@@ -293,4 +351,5 @@ func main() {
 	Solve13()
 	Solve14()
 	Solve15()
+	Solve16()
 }

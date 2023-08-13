@@ -1,6 +1,9 @@
 package mt
 
-import "math/bits"
+import (
+	"encoding/binary"
+	"math/bits"
+)
 
 func Temper(x uint32) uint32 {
 	x ^= x >> 11
@@ -94,4 +97,17 @@ func (mt *Mt19937) Next() uint32 {
 	copy(mt.state[0:], mt.state[1:])
 	mt.state[len(mt.state)-1] = next
 	return Temper(next)
+}
+
+func Crypt(payload []byte, seed uint32) []byte {
+	rng := New(seed)
+	res := make([]byte, len(payload))
+	for ii := 0; ii < len(res); ii += 4 {
+		keystream := make([]byte, 4)
+		binary.LittleEndian.PutUint32(keystream, rng.Next())
+		for jj := 0; jj < 4 && ii+jj < len(res); jj++ {
+			res[ii+jj] = payload[ii+jj] ^ keystream[jj]
+		}
+	}
+	return res
 }

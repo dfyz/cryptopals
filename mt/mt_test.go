@@ -1,6 +1,7 @@
 package mt
 
 import (
+	"bytes"
 	"log"
 	"testing"
 )
@@ -64,6 +65,22 @@ func TestMt19937(t *testing.T) {
 			if actual != tt.expected[ii] {
 				log.Fatalf("seed %d, element #%d: %d != %d", tt.seed, ii, actual, tt.expected[ii])
 			}
+		}
+	}
+}
+
+func TestCrypt(t *testing.T) {
+	plaintext := []byte("YELLOW SUBMARINE")
+	seeds := []uint32{1, 1337, 31337, 1234567, 3_133_731_337}
+
+	for _, seed := range seeds {
+		ciphertext := Crypt(plaintext, seed)
+		if bytes.Equal(ciphertext, plaintext) {
+			log.Fatalf("Crypt(%q) shouldn't be identity for seed %d", plaintext, seed)
+		}
+		restored := Crypt(ciphertext, seed)
+		if !bytes.Equal(restored, plaintext) {
+			log.Fatalf("Crypt(Crypt(%q)) doesn't roundtrip for seed %d", plaintext, seed)
 		}
 	}
 }

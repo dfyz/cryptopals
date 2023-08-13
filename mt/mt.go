@@ -21,8 +21,10 @@ func Untemper(x uint32) uint32 {
 	return x
 }
 
+const N = 624
+
 type Mt19937 struct {
-	state [624]uint32
+	state [N]uint32
 }
 
 func New(seed uint32) Mt19937 {
@@ -32,6 +34,12 @@ func New(seed uint32) Mt19937 {
 		prev := res.state[i-1]
 		res.state[i] = 1812433253*(prev^(prev>>30)) + uint32(i)
 	}
+	return res
+}
+
+func Clone(state []uint32) Mt19937 {
+	res := Mt19937{}
+	copy(res.state[:], state)
 	return res
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"cryptopals/mt"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -30,7 +31,29 @@ func Solve22() {
 	}
 }
 
+func Solve23() {
+	seed := rand.Uint32()
+	rng := mt.New(seed)
+	cloned := make([]uint32, mt.N)
+	for i := 0; i < mt.N; i++ {
+		cloned[i] = mt.Untemper(rng.Next())
+	}
+
+	fakeRng := mt.Clone(cloned)
+	matches := 0
+	for ii := 0; ii < 1000; ii++ {
+		if rng.Next() == fakeRng.Next() {
+			matches++
+		}
+	}
+	log.Printf(
+		"Challenge 23: the cloned RNG agrees with the real one for %d steps out of 1000",
+		matches,
+	)
+}
+
 func main() {
 	// Solve21() is the implementation of Mersenne Twister in mt/mt.go
 	Solve22()
+	Solve23()
 }

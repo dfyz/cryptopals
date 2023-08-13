@@ -10,7 +10,7 @@ import (
 )
 
 func Solve21() {
-	fmt.Printf("Challenge 21: is just the implementation of Mersenne Twister in mt/mt.go")
+	fmt.Printf("Challenge 21: is just the implementation of Mersenne Twister in mt/mt.go\n")
 }
 
 func Solve22() {

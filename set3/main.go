@@ -71,25 +71,37 @@ func Solve24() {
 		}
 	}
 
-	seedTime := uint32(time.Now().Unix())
-	ciphertextTime := mt.Crypt(plaintext, seedTime)
+	timestampGuesses := 0
+	for attempts := 0; attempts < 1000; attempts++ {
+		useTime := rand.Intn(2) == 1
+		var seed uint32
+		if useTime {
+			seed = uint32(time.Now().Unix())
+		} else {
+			seed = rand.Uint32()
+		}
+		ciphertextTime := mt.Crypt(plaintext, seed)
 
-	restoredSeedTime := uint32(0)
-	curTime := uint32(time.Now().Unix())
-	for delta := uint32(0); ; delta++ {
-		candSeed := curTime - delta
-		if bytes.HasSuffix(mt.Crypt(ciphertextTime, candSeed), knownSuffix) {
-			restoredSeedTime = candSeed
-			break
+		guessedUseTime := false
+		curTime := uint32(time.Now().Unix())
+		for delta := uint32(0); delta < 60; delta++ {
+			candSeed := curTime - delta
+			if bytes.HasSuffix(mt.Crypt(ciphertextTime, candSeed), knownSuffix) {
+				guessedUseTime = true
+				break
+			}
+		}
+
+		if useTime == guessedUseTime {
+			timestampGuesses++
 		}
 	}
 
 	fmt.Printf(
-		"Challenge 24: 16-bit seed = %d/%d, timestamp seed = %d/%d\n",
+		"Challenge 24: 16-bit seed = %d/%d, timestamp guesses = %d/1000\n",
 		seed16,
 		restoredSeed16,
-		seedTime,
-		restoredSeedTime,
+		timestampGuesses,
 	)
 }
 

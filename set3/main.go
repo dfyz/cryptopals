@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+func Solve21() {
+	fmt.Printf("Challenge 21: is just the implementation of Mersenne Twister in mt/mt.go")
+}
+
 func Solve22() {
 	curTime := uint32(time.Now().Unix())
 
@@ -90,7 +94,7 @@ func Solve24() {
 }
 
 func main() {
-	// Solve21() is the implementation of Mersenne Twister in mt/mt.go
+	Solve21()
 	Solve22()
 	Solve23()
 	Solve24()

@@ -1,9 +1,23 @@
-package util
+package mt
 
 import (
 	"log"
 	"testing"
 )
+
+func TestTemper(t *testing.T) {
+	vals := []uint32{1, 1337, 31337, 1234567, 3_133_731_337}
+	for _, orig := range vals {
+		tempered := Temper(orig)
+		if tempered == orig {
+			log.Fatalf("Temper(%d) should change the value", orig)
+		}
+		restored := Untemper(tempered)
+		if restored != orig {
+			log.Fatalf("Untemper(Temper(%d)) = %d", orig, restored)
+		}
+	}
+}
 
 func TestMt19937(t *testing.T) {
 	const N = 10

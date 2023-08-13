@@ -1,4 +1,4 @@
-package util
+package mt
 
 func Temper(x uint32) uint32 {
 	x ^= x >> 11

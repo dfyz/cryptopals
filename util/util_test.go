@@ -1,7 +1,6 @@
 package util
 
 import (
-	"log"
 	"reflect"
 	"testing"
 )
@@ -28,10 +27,10 @@ func TestParseKV(t *testing.T) {
 	for _, tt := range goodTests {
 		actual, err := ParseKV(tt.input)
 		if err != nil {
-			log.Fatalf("Expected %v, got error %v", tt.expected, err)
+			t.Fatalf("Expected %v, got error %v", tt.expected, err)
 		}
 		if !reflect.DeepEqual(tt.expected, actual) {
-			log.Fatalf("Expected %v, got %v", tt.expected, actual)
+			t.Fatalf("Expected %v, got %v", tt.expected, actual)
 		}
 	}
 
@@ -44,7 +43,7 @@ func TestParseKV(t *testing.T) {
 	for _, tt := range badTests {
 		actual, err := ParseKV(tt)
 		if err == nil {
-			log.Fatalf("Expected an error, got %v", actual)
+			t.Fatalf("Expected an error, got %v", actual)
 		}
 	}
 }
